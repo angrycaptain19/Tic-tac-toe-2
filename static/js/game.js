@@ -6,14 +6,33 @@ document.addEventListener('DOMContentLoaded', () => {
     
     let gameState = {
         board: ["", "", "", "", "", "", "", "", ""],
-        currentPlayer: 'X'
+        currentPlayer: 'X',
+        player1Score: 0,
+        player2Score: 0,
+        isPlayer1X: true
     };
     
     cells.forEach(cell => {
         cell.addEventListener('click', handleMove);
     });
     
+    const resetScoreButton = document.getElementById('resetScore');
+    const player1ScoreDisplay = document.getElementById('player1Score');
+    const player2ScoreDisplay = document.getElementById('player2Score');
+    
     resetButton.addEventListener('click', resetGame);
+    resetScoreButton.addEventListener('click', resetScore);
+    
+    function updateScoreboard() {
+        player1ScoreDisplay.textContent = gameState.player1Score;
+        player2ScoreDisplay.textContent = gameState.player2Score;
+    }
+    
+    function resetScore() {
+        gameState.player1Score = 0;
+        gameState.player2Score = 0;
+        updateScoreboard();
+    }
     
     function handleMove(event) {
         const cell = event.target;
@@ -28,8 +47,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (winner === 'tie') {
                     alert("It's a tie!");
                 } else {
-                    alert(`Player ${winner} wins!`);
+                    // Update score
+                    if (winner === 'X') {
+                        gameState.player1Score += gameState.isPlayer1X ? 1 : 0;
+                        gameState.player2Score += gameState.isPlayer1X ? 0 : 1;
+                    } else {
+                        gameState.player1Score += gameState.isPlayer1X ? 0 : 1;
+                        gameState.player2Score += gameState.isPlayer1X ? 1 : 0;
+                    }
+                    updateScoreboard();
+                    alert(`Player ${winner} wins! Score - X: ${gameState.player1Score}, O: ${gameState.player2Score}`);
                 }
+                // Start new game after a brief delay
+                setTimeout(() => {
+                    resetBoard();
+                }, 500);
                 return;
             }
             
@@ -65,12 +97,16 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     
-    function resetGame() {
-        gameState = {
-            board: ["", "", "", "", "", "", "", "", ""],
-            currentPlayer: 'X'
-        };
+    function resetBoard() {
+        gameState.board = ["", "", "", "", "", "", "", "", ""];
+        gameState.isPlayer1X = !gameState.isPlayer1X; // Alternate who starts
+        gameState.currentPlayer = 'X';
         updateBoard(gameState.board);
         currentPlayerSpan.textContent = gameState.currentPlayer;
+    }
+
+    function resetGame() {
+        resetBoard();
+        resetScore();
     }
 });
