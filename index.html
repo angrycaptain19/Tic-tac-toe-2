@@ -3,27 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Play Tic Tac Toe online - A simple browser-based game">
-    <title>Tic Tac Toe</title>
+    <meta name="description" content="Play classic games online - A collection of browser-based games">
+    <title>Game Center</title>
     <link rel="stylesheet" href="static/css/style.css">
 </head>
 <body>
     <div class="container">
-        <h1>Tic Tac Toe</h1>
-        <div id="game-info">Current Player: <span id="current-player">X</span></div>
-        <div id="board">
-            <div class="cell" data-index="0"></div>
-            <div class="cell" data-index="1"></div>
-            <div class="cell" data-index="2"></div>
-            <div class="cell" data-index="3"></div>
-            <div class="cell" data-index="4"></div>
-            <div class="cell" data-index="5"></div>
-            <div class="cell" data-index="6"></div>
-            <div class="cell" data-index="7"></div>
-            <div class="cell" data-index="8"></div>
+        <h1>Game Center</h1>
+        <div class="games-grid">
+            <div class="game-card" data-game="tictactoe">
+                <img src="static/images/tictactoe-preview.png" alt="Tic Tac Toe Preview">
+                <h2>Tic Tac Toe</h2>
+                <p>Classic X's and O's game</p>
+            </div>
         </div>
-        <button id="reset">Reset Game</button>
     </div>
-    <script src="static/js/game.js"></script>
+    <script src="static/js/games.js"></script>
 </body>
 </html>
