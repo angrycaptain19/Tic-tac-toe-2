@@ -115,6 +115,27 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+    function isPathClear(from, to) {
+        const [fromCol, fromRow] = [from.charCodeAt(0) - 97, parseInt(from[1]) - 1];
+        const [toCol, toRow] = [to.charCodeAt(0) - 97, parseInt(to[1]) - 1];
+        
+        const colStep = Math.sign(toCol - fromCol) || 0;
+        const rowStep = Math.sign(toRow - fromRow) || 0;
+        
+        let currentCol = fromCol + colStep;
+        let currentRow = fromRow + rowStep;
+        
+        while (currentCol !== toCol || currentRow !== toRow) {
+            const position = String.fromCharCode(97 + currentCol) + (currentRow + 1);
+            if (gameState.pieces.get(position)) {
+                return false;
+            }
+            currentCol += colStep;
+            currentRow += rowStep;
+        }
+        return true;
+    }
+
     function isValidMove(from, to) {
         const piece = gameState.pieces.get(from);
         const targetPiece = gameState.pieces.get(to);
@@ -130,17 +151,31 @@ document.addEventListener('DOMContentLoaded', function() {
 
         switch (piece.piece) {
             case '♙': // White pawn
-                return fromCol === toCol && ((toRow === fromRow + 1) || 
-                       (fromRow === 1 && toRow === fromRow + 2));
+                if (targetPiece) {
+                    // Capture diagonally
+                    return Math.abs(toCol - fromCol) === 1 && toRow === fromRow + 1;
+                }
+                // Move forward
+                if (fromCol === toCol && ((toRow === fromRow + 1) || (fromRow === 1 && toRow === fromRow + 2))) {
+                    return isPathClear(from, to);
+                }
+                return false;
             case '♟': // Black pawn
-                return fromCol === toCol && ((toRow === fromRow - 1) || 
-                       (fromRow === 6 && toRow === fromRow - 2));
+                if (targetPiece) {
+                    // Capture diagonally
+                    return Math.abs(toCol - fromCol) === 1 && toRow === fromRow - 1;
+                }
+                // Move forward
+                if (fromCol === toCol && ((toRow === fromRow - 1) || (fromRow === 6 && toRow === fromRow - 2))) {
+                    return isPathClear(from, to);
+                }
+                return false;
             case '♖': case '♜': // Rook
-                return fromCol === toCol || fromRow === toRow;
+                return (fromCol === toCol || fromRow === toRow) && isPathClear(from, to);
             case '♗': case '♝': // Bishop
-                return colDiff === rowDiff;
+                return colDiff === rowDiff && isPathClear(from, to);
             case '♕': case '♛': // Queen
-                return fromCol === toCol || fromRow === toRow || colDiff === rowDiff;
+                return (fromCol === toCol || fromRow === toRow || colDiff === rowDiff) && isPathClear(from, to);
             case '♔': case '♚': // King
                 return colDiff <= 1 && rowDiff <= 1;
             case '♘': case '♞': // Knight
