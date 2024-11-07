@@ -309,7 +309,6 @@ function initializeBoard() {
 
     function movePiece(from, to) {
         const piece = gameState.pieces.get(from);
-        const piece = gameState.pieces.get(from);
         const targetPiece = gameState.pieces.get(to);
         
         if (targetPiece) {
