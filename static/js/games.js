@@ -6,6 +6,8 @@ document.addEventListener('DOMContentLoaded', function() {
             const game = this.dataset.game;
             if (game === 'tictactoe') {
                 window.location.href = 'games/tictactoe.html';
+            } else if (game === 'chess') {
+                window.location.href = 'games/chess.html';
             }
         });
     });
