@@ -4,10 +4,47 @@ document.addEventListener('DOMContentLoaded', function() {
     const resetButton = document.getElementById('reset-game');
     const capturedWhite = document.getElementById('captured-pieces-white');
     const capturedBlack = document.getElementById('captured-pieces-black');
+    const modal = document.getElementById('game-mode-modal');
+    const computerStatus = document.getElementById('computer-status');
     
     let selectedPiece = null;
     let currentPlayer = 'white';
-    let gameState = initializeBoard();
+    let gameState = null;
+    let gameMode = null;
+    let computerDifficulty = null;
+    let isComputerThinking = false;
+
+    // Show game mode selection on start
+    showGameModeSelection();
+
+    function showGameModeSelection() {
+        modal.classList.remove('hidden');
+        document.getElementById('one-player').addEventListener('click', () => {
+            document.getElementById('difficulty-select').classList.remove('hidden');
+        });
+        
+        document.getElementById('two-player').addEventListener('click', () => {
+            gameMode = '2player';
+            modal.classList.add('hidden');
+            startNewGame();
+        });
+
+        document.querySelectorAll('#difficulty-select button').forEach(button => {
+            button.addEventListener('click', (e) => {
+                gameMode = '1player';
+                computerDifficulty = e.target.dataset.difficulty;
+                modal.classList.add('hidden');
+                startNewGame();
+            });
+        });
+    }
+
+    function startNewGame() {
+        gameState = initializeBoard();
+        currentPlayer = 'white';
+        status.textContent = "White's Turn";
+        updateBoard();
+    }
 
     function initializeBoard() {
         const initialState = {
@@ -48,6 +85,9 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function handleSquareClick(event) {
+        if (isComputerThinking || (gameMode === '1player' && currentPlayer === 'black')) {
+            return;
+        }
         const square = event.target;
         const position = square.dataset.position;
         const piece = gameState.pieces.get(position);
@@ -61,6 +101,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 selectedPiece = null;
                 currentPlayer = currentPlayer === 'white' ? 'black' : 'white';
                 status.textContent = `${currentPlayer.charAt(0).toUpperCase() + currentPlayer.slice(1)}'s Turn`;
+                
+                if (gameMode === '1player' && currentPlayer === 'black') {
+                    makeComputerMove();
+                }
             } else {
                 selectedPiece = null;
             }
@@ -75,12 +119,66 @@ document.addEventListener('DOMContentLoaded', function() {
         const piece = gameState.pieces.get(from);
         const targetPiece = gameState.pieces.get(to);
         
-        if (targetPiece && targetPiece.color === piece.color) {
+        if (!piece || (targetPiece && targetPiece.color === piece.color)) {
             return false;
         }
+
+        const [fromCol, fromRow] = [from.charCodeAt(0) - 97, parseInt(from[1]) - 1];
+        const [toCol, toRow] = [to.charCodeAt(0) - 97, parseInt(to[1]) - 1];
+        const colDiff = Math.abs(toCol - fromCol);
+        const rowDiff = Math.abs(toRow - fromRow);
+
+        switch (piece.piece) {
+            case '♙': // White pawn
+                return fromCol === toCol && ((toRow === fromRow + 1) || 
+                       (fromRow === 1 && toRow === fromRow + 2));
+            case '♟': // Black pawn
+                return fromCol === toCol && ((toRow === fromRow - 1) || 
+                       (fromRow === 6 && toRow === fromRow - 2));
+            case '♖': case '♜': // Rook
+                return fromCol === toCol || fromRow === toRow;
+            case '♗': case '♝': // Bishop
+                return colDiff === rowDiff;
+            case '♕': case '♛': // Queen
+                return fromCol === toCol || fromRow === toRow || colDiff === rowDiff;
+            case '♔': case '♚': // King
+                return colDiff <= 1 && rowDiff <= 1;
+            case '♘': case '♞': // Knight
+                return (colDiff === 2 && rowDiff === 1) || (colDiff === 1 && rowDiff === 2);
+        }
+        return false;
+    }
+
+    async function makeComputerMove() {
+        isComputerThinking = true;
+        computerStatus.classList.remove('hidden');
         
-        // Basic movement validation - can be expanded for specific piece rules
-        return true;
+        // Simulate thinking time
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
+        // Simple computer strategy: randomly select a valid move
+        const possibleMoves = [];
+        gameState.pieces.forEach((piece, from) => {
+            if (piece.color === 'black') {
+                const squares = board.getElementsByClassName('chess-square');
+                Array.from(squares).forEach(square => {
+                    const to = square.dataset.position;
+                    if (isValidMove(from, to)) {
+                        possibleMoves.push({ from, to });
+                    }
+                });
+            }
+        });
+
+        if (possibleMoves.length > 0) {
+            const move = possibleMoves[Math.floor(Math.random() * possibleMoves.length)];
+            movePiece(move.from, move.to);
+            currentPlayer = 'white';
+            status.textContent = "White's Turn";
+        }
+
+        isComputerThinking = false;
+        computerStatus.classList.add('hidden');
     }
 
     function movePiece(from, to) {
