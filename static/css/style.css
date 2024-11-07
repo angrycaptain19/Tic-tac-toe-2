@@ -217,6 +217,10 @@ h1 {
     border-radius: 50%;
 }
 
+.king-in-check {
+    background-color: #ff6b6b !important;
+}
+
 .captured-pieces {
     min-height: 200px;
     width: 100px;
