@@ -115,6 +115,31 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+    function getSquaresBetween(from, to) {
+        const squares = [];
+        const [fromCol, fromRow] = [from.charCodeAt(0) - 97, parseInt(from[1])];
+        const [toCol, toRow] = [to.charCodeAt(0) - 97, parseInt(to[1])];
+        
+        const colStep = Math.sign(toCol - fromCol);
+        const rowStep = Math.sign(toRow - fromRow);
+        
+        let currentCol = fromCol + colStep;
+        let currentRow = fromRow + rowStep;
+        
+        while (currentCol !== toCol || currentRow !== toRow) {
+            squares.push(String.fromCharCode(97 + currentCol) + currentRow);
+            if (currentCol !== toCol) currentCol += colStep;
+            if (currentRow !== toRow) currentRow += rowStep;
+        }
+        
+        return squares;
+    }
+
+    function isPathClear(from, to) {
+        const squares = getSquaresBetween(from, to);
+        return squares.every(square => !gameState.pieces.has(square));
+    }
+
     function isValidMove(from, to) {
         const piece = gameState.pieces.get(from);
         const targetPiece = gameState.pieces.get(to);
@@ -130,17 +155,27 @@ document.addEventListener('DOMContentLoaded', function() {
 
         switch (piece.piece) {
             case '♙': // White pawn
-                return fromCol === toCol && ((toRow === fromRow + 1) || 
-                       (fromRow === 1 && toRow === fromRow + 2));
+                if (fromCol === toCol) {
+                    if (toRow === fromRow + 1) return !targetPiece;
+                    if (fromRow === 1 && toRow === fromRow + 2) {
+                        return !targetPiece && isPathClear(from, to);
+                    }
+                }
+                return false;
             case '♟': // Black pawn
-                return fromCol === toCol && ((toRow === fromRow - 1) || 
-                       (fromRow === 6 && toRow === fromRow - 2));
+                if (fromCol === toCol) {
+                    if (toRow === fromRow - 1) return !targetPiece;
+                    if (fromRow === 6 && toRow === fromRow - 2) {
+                        return !targetPiece && isPathClear(from, to);
+                    }
+                }
+                return false;
             case '♖': case '♜': // Rook
-                return fromCol === toCol || fromRow === toRow;
+                return (fromCol === toCol || fromRow === toRow) && isPathClear(from, to);
             case '♗': case '♝': // Bishop
-                return colDiff === rowDiff;
+                return colDiff === rowDiff && isPathClear(from, to);
             case '♕': case '♛': // Queen
-                return fromCol === toCol || fromRow === toRow || colDiff === rowDiff;
+                return (fromCol === toCol || fromRow === toRow || colDiff === rowDiff) && isPathClear(from, to);
             case '♔': case '♚': // King
                 return colDiff <= 1 && rowDiff <= 1;
             case '♘': case '♞': // Knight
@@ -217,11 +252,10 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function showValidMoves(position) {
-        // Implement valid move highlighting based on piece type
-        // This is a simplified version that highlights all empty squares
         const squares = board.getElementsByClassName('chess-square');
         Array.from(squares).forEach(square => {
-            if (!gameState.pieces.get(square.dataset.position)) {
+            const targetPos = square.dataset.position;
+            if (isValidMove(position, targetPos)) {
                 square.classList.add('valid-move');
             }
         });
