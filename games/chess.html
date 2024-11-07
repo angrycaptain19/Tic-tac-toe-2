@@ -7,10 +7,29 @@
     <link rel="stylesheet" href="../static/css/style.css">
 </head>
 <body>
+    <div id="game-mode-modal" class="modal">
+        <div class="modal-content">
+            <h2>Select Game Mode</h2>
+            <div class="mode-options">
+                <button id="one-player">vs Computer</button>
+                <button id="two-player">vs Human</button>
+            </div>
+            <div id="difficulty-select" class="difficulty-options hidden">
+                <h3>Select Difficulty</h3>
+                <button data-difficulty="easy">Easy</button>
+                <button data-difficulty="medium">Medium</button>
+                <button data-difficulty="hard">Hard</button>
+            </div>
+        </div>
+    </div>
     <div class="container chess-container">
         <h1>Chess</h1>
         <div id="game-info">
             <div id="status">White's Turn</div>
+            <div id="computer-status" class="computer-status hidden">
+                <div class="spinner"></div>
+                <span>Computer is thinking...</span>
+            </div>
         </div>
         <div class="chess-layout">
             <div id="captured-pieces-white" class="captured-pieces"></div>
