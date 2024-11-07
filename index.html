@@ -4,14 +4,23 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Play Tic Tac Toe online - A simple browser-based game">
-    <title>Tic Tac Toe</title>
+    <title>Mini Arcade</title>
     <link rel="stylesheet" href="static/css/style.css">
 </head>
 <body>
     <div class="container">
-        <h1>Tic Tac Toe</h1>
-        <div id="game-info">Current Player: <span id="current-player">X</span></div>
-        <div id="board">
+        <h1>Mini Arcade</h1>
+        <div id="game-selection" class="game-menu">
+            <button class="game-button" data-game="tictactoe">Tic Tac Toe</button>
+            <button class="game-button" data-game="snake">Snake</button>
+            <button class="game-button" data-game="pong">Pong</button>
+            <button class="game-button" data-game="memory">Memory</button>
+        </div>
+        
+        <div id="tictactoe-game" class="game-container">
+            <h2>Tic Tac Toe</h2>
+            <div id="game-info">Current Player: <span id="current-player">X</span></div>
+            <div id="board">
             <div class="cell" data-index="0"></div>
             <div class="cell" data-index="1"></div>
             <div class="cell" data-index="2"></div>
@@ -24,6 +33,28 @@
         </div>
         <button id="reset">Reset Game</button>
     </div>
-    <script src="static/js/game.js"></script>
+    <div id="snake-game" class="game-container" style="display: none">
+        <h2>Snake</h2>
+        <canvas id="snake-canvas" width="400" height="400"></canvas>
+        <div class="game-score">Score: <span id="snake-score">0</span></div>
+    </div>
+
+    <div id="pong-game" class="game-container" style="display: none">
+        <h2>Pong</h2>
+        <canvas id="pong-canvas" width="600" height="400"></canvas>
+        <div class="game-score">Score: <span id="pong-score">0</span></div>
+    </div>
+
+    <div id="memory-game" class="game-container" style="display: none">
+        <h2>Memory Game</h2>
+        <div id="memory-board"></div>
+        <div class="game-score">Moves: <span id="memory-moves">0</span></div>
+    </div>
+
+    <script src="static/js/gameManager.js"></script>
+    <script src="static/js/games/tictactoe.js"></script>
+    <script src="static/js/games/snake.js"></script>
+    <script src="static/js/games/pong.js"></script>
+    <script src="static/js/games/memory.js"></script>
 </body>
 </html>
