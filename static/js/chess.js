@@ -44,9 +44,95 @@ document.addEventListener('DOMContentLoaded', function() {
         currentPlayer = 'white';
         status.textContent = "White's Turn";
         updateBoard();
+        
+        // Check for check/checkmate conditions
+        const opponentColor = currentPlayer === 'white' ? 'black' : 'white';
+        if (isKingInCheck(opponentColor)) {
+            const kingSquare = document.querySelector(`[data-position="${findKingPosition(opponentColor)}"]`);
+            kingSquare.classList.add('king-in-check');
+            
+            if (isCheckmate(opponentColor)) {
+                status.textContent = `Checkmate! ${currentPlayer.charAt(0).toUpperCase() + currentPlayer.slice(1)} wins!`;
+                // Disable further moves
+                Array.from(board.getElementsByClassName('chess-square')).forEach(square => {
+                    square.removeEventListener('click', handleSquareClick);
+                });
+            } else {
+                status.textContent = `${opponentColor.charAt(0).toUpperCase() + opponentColor.slice(1)} is in check!`;
+            }
+        } else {
+            // Remove any previous check highlights
+            const squares = board.getElementsByClassName('chess-square');
+            Array.from(squares).forEach(square => {
+                square.classList.remove('king-in-check');
+            });
+        }
     }
 
-    function initializeBoard() {
+    function findKingPosition(color) {
+    for (const [position, piece] of gameState.pieces) {
+        if ((piece.piece === '♔' && color === 'white') || 
+            (piece.piece === '♚' && color === 'black')) {
+            return position;
+        }
+    }
+    return null;
+}
+
+function isKingInCheck(color) {
+    const kingPos = findKingPosition(color);
+    if (!kingPos) return false;
+
+    const opponentColor = color === 'white' ? 'black' : 'white';
+    for (const [position, piece] of gameState.pieces) {
+        if (piece.color === opponentColor && isValidMove(position, kingPos, true)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+function wouldMoveExposeCheck(from, to, color) {
+    // Temporarily make the move and check if it results in check
+    const originalTarget = gameState.pieces.get(to);
+    const movingPiece = gameState.pieces.get(from);
+    
+    gameState.pieces.delete(from);
+    gameState.pieces.set(to, movingPiece);
+    
+    const exposesCheck = isKingInCheck(color);
+    
+    // Undo the temporary move
+    gameState.pieces.set(from, movingPiece);
+    if (originalTarget) {
+        gameState.pieces.set(to, originalTarget);
+    } else {
+        gameState.pieces.delete(to);
+    }
+    
+    return exposesCheck;
+}
+
+function isCheckmate(color) {
+    if (!isKingInCheck(color)) return false;
+    
+    // Check all possible moves for all pieces
+    for (const [from, piece] of gameState.pieces) {
+        if (piece.color === color) {
+            for (let col = 0; col < 8; col++) {
+                for (let row = 1; row <= 8; row++) {
+                    const to = String.fromCharCode(97 + col) + row;
+                    if (isValidMove(from, to, true) && !wouldMoveExposeCheck(from, to, color)) {
+                        return false;
+                    }
+                }
+            }
+        }
+    }
+    return true;
+}
+
+function initializeBoard() {
         const initialState = {
             pieces: new Map(),
             capturedPieces: { white: [], black: [] }
@@ -136,11 +222,16 @@ document.addEventListener('DOMContentLoaded', function() {
         return true;
     }
 
-    function isValidMove(from, to) {
+    function isValidMove(from, to, ignoreCheck = false) {
         const piece = gameState.pieces.get(from);
         const targetPiece = gameState.pieces.get(to);
         
         if (!piece || (targetPiece && targetPiece.color === piece.color)) {
+            return false;
+        }
+
+        // Don't allow moves that would put or leave own king in check
+        if (!ignoreCheck && wouldMoveExposeCheck(from, to, piece.color)) {
             return false;
         }
 
@@ -218,6 +309,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function movePiece(from, to) {
         const piece = gameState.pieces.get(from);
+        const piece = gameState.pieces.get(from);
         const targetPiece = gameState.pieces.get(to);
         
         if (targetPiece) {
@@ -247,16 +339,15 @@ document.addEventListener('DOMContentLoaded', function() {
     function clearHighlights() {
         const squares = board.getElementsByClassName('chess-square');
         Array.from(squares).forEach(square => {
-            square.classList.remove('selected-piece', 'valid-move');
+            square.classList.remove('selected-piece', 'valid-move', 'king-in-check');
         });
     }
 
     function showValidMoves(position) {
-        // Implement valid move highlighting based on piece type
-        // This is a simplified version that highlights all empty squares
         const squares = board.getElementsByClassName('chess-square');
         Array.from(squares).forEach(square => {
-            if (!gameState.pieces.get(square.dataset.position)) {
+            const targetPos = square.dataset.position;
+            if (isValidMove(position, targetPos)) {
                 square.classList.add('valid-move');
             }
         });
