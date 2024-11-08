@@ -13,6 +13,17 @@ document.addEventListener('DOMContentLoaded', function() {
     let gameMode = null;
     let computerDifficulty = null;
     let isComputerThinking = false;
+    let isGameOver = false;
+
+    // Piece values for position evaluation
+    const PIECE_VALUES = {
+        '♙': 1, '♟': -1,  // Pawns
+        '♘': 3, '♞': -3,  // Knights
+        '♗': 3, '♝': -3,  // Bishops
+        '♖': 5, '♜': -5,  // Rooks
+        '♕': 9, '♛': -9,  // Queens
+        '♔': 100, '♚': -100  // Kings
+    };
 
     // Show game mode selection on start
     showGameModeSelection();
@@ -42,8 +53,95 @@ document.addEventListener('DOMContentLoaded', function() {
     function startNewGame() {
         gameState = initializeBoard();
         currentPlayer = 'white';
+        isGameOver = false;
         status.textContent = "White's Turn";
         updateBoard();
+    }
+
+    function findKingPosition(color) {
+        const kingSymbol = color === 'white' ? '♔' : '♚';
+        for (const [position, piece] of gameState.pieces) {
+            if (piece.piece === kingSymbol) {
+                return position;
+            }
+        }
+        return null;
+    }
+
+    function isKingInCheck(color) {
+        const kingPos = findKingPosition(color);
+        if (!kingPos) return false;
+
+        const oppositeColor = color === 'white' ? 'black' : 'white';
+        for (const [position, piece] of gameState.pieces) {
+            if (piece.color === oppositeColor && isValidMove(position, kingPos, true)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    function isCheckmate(color) {
+        if (!isKingInCheck(color)) return false;
+        return getAllValidMoves(color).length === 0;
+    }
+
+    function isStalemate(color) {
+        if (isKingInCheck(color)) return false;
+        return getAllValidMoves(color).length === 0;
+    }
+
+    function getAllValidMoves(color) {
+        const moves = [];
+        const squares = board.getElementsByClassName('chess-square');
+        
+        gameState.pieces.forEach((piece, from) => {
+            if (piece.color === color) {
+                Array.from(squares).forEach(square => {
+                    const to = square.dataset.position;
+                    if (isValidMove(from, to, false)) {
+                        // Test if move would leave king in check
+                        const tempState = simulateMove(from, to);
+                        if (!wouldBeInCheck(color, tempState)) {
+                            moves.push({ from, to });
+                        }
+                    }
+                });
+            }
+        });
+        return moves;
+    }
+
+    function simulateMove(from, to) {
+        const tempState = {
+            pieces: new Map(gameState.pieces),
+            capturedPieces: { 
+                white: [...gameState.capturedPieces.white],
+                black: [...gameState.capturedPieces.black]
+            }
+        };
+        
+        const piece = tempState.pieces.get(from);
+        tempState.pieces.delete(from);
+        tempState.pieces.set(to, piece);
+        
+        return tempState;
+    }
+
+    function wouldBeInCheck(color, state) {
+        const originalState = gameState;
+        gameState = state;
+        const inCheck = isKingInCheck(color);
+        gameState = originalState;
+        return inCheck;
+    }
+
+    function evaluatePosition() {
+        let score = 0;
+        gameState.pieces.forEach((piece, position) => {
+            score += PIECE_VALUES[piece.piece] || 0;
+        });
+        return score;
     }
 
     function initializeBoard() {
@@ -85,7 +183,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function handleSquareClick(event) {
-        if (isComputerThinking || (gameMode === '1player' && currentPlayer === 'black')) {
+        if (isGameOver || isComputerThinking || (gameMode === '1player' && currentPlayer === 'black')) {
             return;
         }
         const square = event.target;
@@ -136,7 +234,7 @@ document.addEventListener('DOMContentLoaded', function() {
         return true;
     }
 
-    function isValidMove(from, to) {
+    function isValidMove(from, to, ignoreCheck = false) {
         const piece = gameState.pieces.get(from);
         const targetPiece = gameState.pieces.get(to);
         
@@ -185,35 +283,68 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     async function makeComputerMove() {
+        if (isGameOver) return;
+        
         isComputerThinking = true;
         computerStatus.classList.remove('hidden');
         
-        // Simulate thinking time
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        // Add timeout to prevent infinite loops
+        const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Computer move timed out')), 3000)
+        );
 
-        // Simple computer strategy: randomly select a valid move
-        const possibleMoves = [];
-        gameState.pieces.forEach((piece, from) => {
-            if (piece.color === 'black') {
-                const squares = board.getElementsByClassName('chess-square');
-                Array.from(squares).forEach(square => {
-                    const to = square.dataset.position;
-                    if (isValidMove(from, to)) {
-                        possibleMoves.push({ from, to });
+        try {
+            await Promise.race([
+                new Promise(async resolve => {
+                    const validMoves = getAllValidMoves('black');
+                    
+                    if (validMoves.length === 0) {
+                        resolve(null);
+                        return;
                     }
-                });
-            }
-        });
 
-        if (possibleMoves.length > 0) {
-            const move = possibleMoves[Math.floor(Math.random() * possibleMoves.length)];
-            movePiece(move.from, move.to);
-            currentPlayer = 'white';
-            status.textContent = "White's Turn";
+                    // Evaluate each move
+                    const moveScores = validMoves.map(move => {
+                        const tempState = simulateMove(move.from, move.to);
+                        const score = evaluatePosition();
+                        return { ...move, score };
+                    });
+
+                    // Sort by score and pick best move
+                    moveScores.sort((a, b) => b.score - a.score);
+                    const bestMove = moveScores[0];
+
+                    // Add small delay to simulate thinking
+                    await new Promise(r => setTimeout(r, 500));
+                    
+                    if (bestMove) {
+                        movePiece(bestMove.from, bestMove.to);
+                        currentPlayer = 'white';
+                        
+                        if (isCheckmate('white')) {
+                            status.textContent = "Checkmate! Black wins!";
+                            isGameOver = true;
+                        } else if (isStalemate('white')) {
+                            status.textContent = "Stalemate! Game is a draw.";
+                            isGameOver = true;
+                        } else if (isKingInCheck('white')) {
+                            status.textContent = "White is in check!";
+                        } else {
+                            status.textContent = "White's Turn";
+                        }
+                    }
+                    resolve();
+                }),
+                timeoutPromise
+            ]);
+        } catch (error) {
+            console.error('Computer move error:', error);
+            status.textContent = "Computer move error - please reset game";
+            isGameOver = true;
+        } finally {
+            isComputerThinking = false;
+            computerStatus.classList.add('hidden');
         }
-
-        isComputerThinking = false;
-        computerStatus.classList.add('hidden');
     }
 
     function movePiece(from, to) {
@@ -228,6 +359,18 @@ document.addEventListener('DOMContentLoaded', function() {
         gameState.pieces.delete(from);
         gameState.pieces.set(to, piece);
         updateBoard();
+
+        // Check for checkmate/stalemate after move
+        const nextPlayer = currentPlayer === 'white' ? 'black' : 'white';
+        if (isCheckmate(nextPlayer)) {
+            status.textContent = `Checkmate! ${currentPlayer.charAt(0).toUpperCase() + currentPlayer.slice(1)} wins!`;
+            isGameOver = true;
+        } else if (isStalemate(nextPlayer)) {
+            status.textContent = "Stalemate! Game is a draw.";
+            isGameOver = true;
+        } else if (isKingInCheck(nextPlayer)) {
+            status.textContent = `${nextPlayer.charAt(0).toUpperCase() + nextPlayer.slice(1)} is in check!`;
+        }
     }
 
     function updateBoard() {
